@@ -4,7 +4,6 @@ var _ = require('lodash');
 var through = require('through2');
 var gutil = require('gulp-util');
 
-var cheerio = require('cheerio');
 var fs = require('fs');
 var dateformat = require('dateformat');
 var url = require('url');
@@ -105,18 +104,11 @@ function handlerFactory(options) {
             }
 
             function addElementRev(segment, elementSetting) {
-                var segmentWithRev = segment;
-
-                elementSetting.pathReg.lastIndex = 0;
-                var match = elementSetting.pathReg.exec(segment);
-                if (match) {
-                    var src = match[2];
-                    var revPath = addRevPath(src);
-                    return segment.replace(elementSetting.pathReg, '$1' + revPath + '$3');
-                }
+                var doAddElementRev = elementSetting.doAddElementRev || options.defaultDoAddElementRev;
+                return doAddElementRev(segment, addSrcRev, elementSetting);
             }
 
-            function addRevPath(src) {
+            function addSrcRev(src) {
                 if (src && !netSrcReg.test(src)) {
                     var filePath = getFilePath(src);
                     if (fs.existsSync(filePath)) {
@@ -139,7 +131,15 @@ function handlerFactory(options) {
             }
 
             function getFileRev(filePath) {
-                var mtime = fs.statSync(filePath).mtime;
+                if (options.revType === 'hash') {
+                    return getFileHashRev(filePath);
+                } else {
+                    return getFileMtimeRev(filePath);
+                }
+            }
+
+            function getFileHashRev(filePath) {
+                var mtime = getFileMtime(filePath);
                 var cacheInfo = fileRevCache[filePath];
                 if (cacheInfo && cacheInfo.mtime === mtime) {
                     var msg = gutil.colors.green('found in cache >>' + filePath + '@' + mtime);
@@ -152,6 +152,14 @@ function handlerFactory(options) {
                     };
                 }
                 return cacheInfo.rev;
+            }
+
+            function getFileMtimeRev(filePath) {
+                return dateformat(new Date(), options.dateFormat);
+            }
+
+            function getFileMtime(filePath) {
+                return fs.statSync(filePath).mtime;
             }
 
             function doGetFileRev(filePath) {
@@ -186,10 +194,23 @@ function handlerFactory(options) {
             dateFormat: 'yyyymmddHHMM',
             revType: 'hash',
             transformPath: defaultPathTransformer,
-            elementAttributes: getDefaultElementAttributes()
+            elementAttributes: getDefaultElementAttributes(),
+            defaultDoAddElementRev: defaultDoAddElementRev
         };
 
         // return void(0);
+
+        function defaultDoAddElementRev(segment, addSrcRev, elementSetting) {
+            elementSetting.pathReg.lastIndex = 0;
+            var match = elementSetting.pathReg.exec(segment);
+            if (match) {
+                var src = match[2];
+                var revSrc = addSrcRev(src);
+                return segment.replace(elementSetting.pathReg, '$1' + revSrc + '$3');
+            } else {
+                return segment;
+            }
+        }
 
         function defaultPathTransformer(orgPath, rev) {
             var regStr = '((\\?|\\&|\\&amp\\;)' + options.suffix + '=)([^&\\s]+)';
