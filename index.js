@@ -1,3 +1,5 @@
+'use strict';
+
 var _ = require('lodash');
 var through = require('through2');
 var gutil = require('gulp-util');
@@ -10,6 +12,7 @@ var path = require('path');
 var crypto = require('crypto');
 
 var regOption = 'ig';
+var absoluteSrcReg = new RegExp('^\\/{1}[^\\/]+', regOption);
 
 var fileverCache = {};
 
@@ -20,11 +23,14 @@ return void(0);
 function handlerFactory(options) {
     var defaultOptions = createDefaultOptions();
     var options = _.assign(defaultOptions, options);
+
     return through.obj(revHandler);
 
     // return void(0);
 
     function revHandler(file, enc, cb) {
+        var baseDir = options.base || file.cwd;
+
         if (options.cwd !== '') {
             var msg = gutil.colors.red('options.cwd is obsoleted, use options.base or set gulp.src(path, {cwd:mycwd}) instead');
             gutil.log(msg);
@@ -68,7 +74,6 @@ function handlerFactory(options) {
 
             function addRevsByType(html, elementSetting) {
                 var htmlSegments = html.split(elementSetting.tagReg);
-                console.log(elementSetting, htmlSegments);
 
                 _(htmlSegments)
                     .forEach(function(segment, index, segments) {
@@ -114,9 +119,22 @@ function handlerFactory(options) {
 
                 elementSetting.pathReg.lastIndex = 0;
                 var match = elementSetting.pathReg.exec(segment);
-                segmentWithRev = segment.replace(elementSetting.pathReg, '$1' + '?v=xxxxxxxxx');
+                if (match) {
+                    var src = match[2];
+                    var revPath = addRevPath(src);
+                    return segment.replace(elementSetting.pathReg, '$1' + revPath + '$3');
+                }
+            }
 
-                return segmentWithRev;
+            function addRevPath(src) {
+                var srcPath = url.parse(src).pathname;
+                var filePath = absoluteSrcReg.test(srcPath) ?
+                    path.join(baseDir, srcPath) :
+                    path.join(path.dirname(file.path), srcPath);
+
+                console.log(filePath);
+
+                return srcPath + '?v=xxxxxxxxx';
             }
         }
 
@@ -160,15 +178,15 @@ function handlerFactory(options) {
             return {
                 js: {
                     tagRegStr: '(<script [^>]+/?>)',
-                    pathRegStr: '(?:\\s+src="([^"]+)")'
+                    pathRegStr: '(?:(\\s+src=")([^"]+)("))'
                 },
                 css: {
                     tagRegStr: '(<link [^>]+/?>)',
-                    pathRegStr: '(?:\\s+href="([^"]+)")'
+                    pathRegStr: '(?:(\\s+href=")([^"]+)("))'
                 },
                 img: {
                     tagRegStr: '(<img [^>]+/?>)',
-                    pathRegStr: '(?:\\s+src="([^"]+)")'
+                    pathRegStr: '(?:(\\s+src=")([^"]+)("))'
                 }
             };
         }
