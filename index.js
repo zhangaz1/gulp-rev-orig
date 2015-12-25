@@ -9,6 +9,8 @@ var url = require('url');
 var path = require('path');
 var crypto = require('crypto');
 
+var regOption = 'ig';
+
 var fileverCache = {};
 
 module.exports = handlerFactory;
@@ -42,7 +44,7 @@ function handlerFactory(options) {
                 rev(file);
             }
         } catch (err) {
-            this.emit('error', new gutil.PluginError('gulp-rev-easy', err));
+            this.emit('error', new gutil.PluginError('gulp-rev-orig', err));
         }
 
         logEnd(file);
@@ -52,75 +54,70 @@ function handlerFactory(options) {
         // return void(0);
 
         function rev(file) {
-            var $ = cheerio.load(file.contents.toString(), {
-                decodeEntities: false
-            });
+            var html = file.contents.toString();
 
-            var baseDir = options.base;
+            var tagsRegStr = createTagRegStr();
+            var tagsReg = new RegExp(tagsRegStr, regOption);
+            var htmlSegments = html.split(tagsReg);
 
-            if (baseDir === '') {
-                baseDir = file.cwd;
-            }
+            prepareRegs();
 
-            for (var i = 0; i < options.fileTypes.length; i++) {
-                var fileType = options.fileTypes[i];
-                var attributes = options.elementAttributes[fileType];
-
-                var $assets = $(attributes.name);
-                for (var j = 0; j < $assets.length; j++) {
-                    var $asset = $assets.eq(j);
-
-                    var src = $asset.attr(attributes.src);
-
-                    if (src && !src.match(/.*(\/\/).*/)) {
-                        var revv = '';
-
-                        if (options.revType === 'hash') {
-                            var srcpath = url.parse(src).pathname;
-                            var filepath = null;
-
-                            //if is a /a/b/c/i.png path need a basedir
-                            if ((/^\/{1}[^\/]+/gi).test(srcpath)) {
-                                filepath = path.join(baseDir, srcpath);
-                            } else {
-                                filepath = path.join(path.dirname(file.path), srcpath);
-                            }
-                            if (fs.existsSync(filepath)) {
-                                var mtime = +fs.statSync(filepath).mtime;
-                                if (fileverCache[filepath] && fileverCache[filepath].mtime == mtime) {
-                                    revv = fileverCache[filepath].rev;
-                                    gutil.log(gutil.colors.green('found in cache >>' + filepath + '@' + mtime));
-                                } else {
-                                    revv = crypto
-                                        .createHash('md5')
-                                        .update(
-                                            fs.readFileSync(filepath, {
-                                                encoding: 'utf8'
-                                            }))
-                                        .digest('hex').substring(0, options.hashLength);
-                                }
-                                fileverCache[filepath] = {
-                                    mtime: mtime,
-                                    rev: revv
-                                };
-                            } else {
-                                gutil.log(gutil.colors.red(filepath + ' not found'));
-                            }
-                        } else {
-                            revv = dateformat(new Date(), options.dateFormat);
-                        }
-
-                        if (revv !== '') {
-                            var newname = options.transformPath(src, revv);
-                            $asset.attr(attributes.src, newname);
-                            gutil.log(src + ' --> ', gutil.colors.green(newname));
-                        } else {
-                            gutil.log(gutil.colors.blue('ignore:rev is empty'), src);
-                        }
+            _(htmlSegments)
+                .forEach(function(segment, index, segments) {
+                    if (isOdd(index)) {
+                        segments[index] = addRev(segment);
                     }
-                }
+                });
+
+            file.contents = new Buffer(htmlSegments.join(''));
+
+            return void(0);
+
+            function prepareRegs() {
+                forEachElementSettings(function(elementSetting) {
+                    elementSetting.tagReg = new RegExp(elementSetting.tagRegStr, regOption);
+                    elementSetting.pathReg = new RegExp(elementSetting.pathRegStr, regOption);
+                });
             }
-            file.contents = new Buffer($.html());
+
+            function forEachElementSettings(cb) {
+                _(options.fileTypes)
+                    .forEach(function(fileType) {
+                        console.log(fileType);
+                        return cb(options.elementAttributes[fileType])
+                    });
+            }
+
+            function isOdd(n) {
+                return n % 2 === 1;
+            }
+
+            function createTagRegStr() {
+                var regStr = _(options.fileTypes)
+                    .map(function(fileType) {
+                        return options.elementAttributes[fileType].tagRegStr;
+                    })
+                    .value()
+                    .join('|');
+
+                return '(' + regStr + ')';
+            }
+
+            function addRev(segment) {
+                var segmentWithRev = segment;
+
+                forEachElementSettings(function(elementSetting) {
+                    if (elementSetting.tagReg.test(segment)) {
+                        elementSetting.pathReg.lastIndex = 0;
+                        var match = elementSetting.pathReg.exec(segment);
+                        console.log(segment, elementSetting.pathReg, match);
+                        segmentWithRev = segment.replace(elementSetting.pathReg, '$1' + '?v=xxxxxxxxx');
+                        return false; // 终止filetype尝试
+                    }
+                });
+
+                return segmentWithRev;
+            }
         }
 
         function logStart(file) {
@@ -148,7 +145,8 @@ function handlerFactory(options) {
         // return void(0);
 
         function defaultPathTransformer(orgPath, rev) {
-            var reg = new RegExp('((\\?|\\&|\\&amp\\;)' + options.suffix + '=)([^&\\s]+)', 'gi');
+            var regStr = '((\\?|\\&|\\&amp\\;)' + options.suffix + '=)([^&\\s]+)';
+            var reg = new RegExp(regStr, regOption);
             var newpath = orgPath;
             if (reg.test(orgPath)) {
                 newpath = orgPath.replace(reg, '$1' + rev);
@@ -161,16 +159,16 @@ function handlerFactory(options) {
         function getDefaultElementAttributes() {
             return {
                 js: {
-                    name: 'script',
-                    src: 'src'
+                    tagRegStr: '<script [^>]+/?>',
+                    pathRegStr: '(?:\\s+src="([^"]+)")'
                 },
                 css: {
-                    name: 'link[rel="stylesheet"]',
-                    src: 'href'
+                    tagRegStr: '<link [^>]+/?>',
+                    pathRegStr: '(?:\\s+href="([^"]+)")'
                 },
                 img: {
-                    name: 'img',
-                    src: 'src'
+                    tagRegStr: '<img [^>]+/?>',
+                    pathRegStr: '(?:\\s+src="([^"]+)")'
                 }
             };
         }
