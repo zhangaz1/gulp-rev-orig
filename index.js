@@ -1,13 +1,13 @@
 'use strict';
 
+var fs = require('fs');
+var path = require('path');
+
 var _ = require('lodash');
 var through = require('through2');
 var gutil = require('gulp-util');
-
-var fs = require('fs');
 var dateformat = require('dateformat');
 var url = require('url');
-var path = require('path');
 var crypto = require('crypto');
 
 var regOption = 'ig';
@@ -74,13 +74,11 @@ function handlerFactory(options) {
 
             function addRevsByType(html, elementSetting) {
                 var htmlSegments = html.split(elementSetting.tagReg);
-
-                _(htmlSegments)
-                    .forEach(function(segment, index, segments) {
-                        if (isOdd(index)) {
-                            segments[index] = addElementRev(segment, elementSetting);
-                        }
-                    });
+                _.forEach(htmlSegments, function(segment, index, segments) {
+                    if (isOdd(index)) {
+                        segments[index] = addElementRev(segment, elementSetting);
+                    }
+                });
 
                 return htmlSegments.join('');
             }
@@ -93,10 +91,9 @@ function handlerFactory(options) {
             }
 
             function forEachElementSettings(cb) {
-                _(options.fileTypes)
-                    .forEach(function(fileType) {
-                        return cb(options.elementAttributes[fileType])
-                    });
+                _.forEach(options.fileTypes, function(fileType) {
+                    return cb(options.elementAttributes[fileType])
+                });
             }
 
             function isOdd(n) {
