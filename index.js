@@ -13,8 +13,9 @@ var crypto = require('crypto');
 
 var regOption = 'ig';
 var absoluteSrcReg = new RegExp('^\\/{1}[^\\/]+', regOption);
+var netSrcReg = new RegExp('.*(\\/\\/).*', regOption);
 
-var fileverCache = {};
+var fileRevCache = {};
 
 module.exports = handlerFactory;
 
@@ -103,17 +104,6 @@ function handlerFactory(options) {
                 return n % 2 === 1;
             }
 
-            function createTagRegStr() {
-                var regStr = _(options.fileTypes)
-                    .map(function(fileType) {
-                        return options.elementAttributes[fileType].tagRegStr;
-                    })
-                    .value()
-                    .join('|');
-
-                return '(' + regStr + ')';
-            }
-
             function addElementRev(segment, elementSetting) {
                 var segmentWithRev = segment;
 
@@ -127,15 +117,54 @@ function handlerFactory(options) {
             }
 
             function addRevPath(src) {
+                if (src && !netSrcReg.test(src)) {
+                    var filePath = getFilePath(src);
+                    if (fs.existsSync(filePath)) {
+                        var fileRev = getFileRev(filePath);
+                        return options.transformPath(src, fileRev);
+                    } else {
+                        gutil.log(gutil.colors.red(filePath + ' not found'));
+                        return src;
+                    }
+                } else {
+                    return src;
+                }
+            }
+
+            function getFilePath(src) {
                 var srcPath = url.parse(src).pathname;
-                var filePath = absoluteSrcReg.test(srcPath) ?
+                return absoluteSrcReg.test(srcPath) ?
                     path.join(baseDir, srcPath) :
                     path.join(path.dirname(file.path), srcPath);
-
-                console.log(filePath);
-
-                return srcPath + '?v=xxxxxxxxx';
             }
+
+            function getFileRev(filePath) {
+                var mtime = fs.statSync(filePath).mtime;
+                var cacheInfo = fileRevCache[filePath];
+                if (cacheInfo && cacheInfo.mtime === mtime) {
+                    var msg = gutil.colors.green('found in cache >>' + filePath + '@' + mtime);
+                    gutil.log(msg);
+                } else {
+                    var rev = doGetFileRev(filePath);
+                    cacheInfo = fileRevCache[filePath] = {
+                        rev: rev,
+                        mtime: mtime
+                    };
+                }
+                return cacheInfo.rev;
+            }
+
+            function doGetFileRev(filePath) {
+                return crypto
+                    .createHash('md5')
+                    .update(
+                        fs.readFileSync(filePath, {
+                            encoding: 'utf8'
+                        }))
+                    .digest('hex')
+                    .substring(0, options.hashLength);
+            }
+
         }
 
         function logStart(file) {
