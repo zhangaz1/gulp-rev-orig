@@ -56,22 +56,29 @@ function handlerFactory(options) {
         function rev(file) {
             var html = file.contents.toString();
 
-            var tagsRegStr = createTagRegStr();
-            var tagsReg = new RegExp(tagsRegStr, regOption);
-            var htmlSegments = html.split(tagsReg);
-
             prepareRegs();
 
-            _(htmlSegments)
-                .forEach(function(segment, index, segments) {
-                    if (isOdd(index)) {
-                        segments[index] = addRev(segment);
-                    }
-                });
+            forEachElementSettings(function(elementSetting) {
+                html = addRevsByType(html, elementSetting);
+            });
 
-            file.contents = new Buffer(htmlSegments.join(''));
+            file.contents = new Buffer(html);
 
             return void(0);
+
+            function addRevsByType(html, elementSetting) {
+                var htmlSegments = html.split(elementSetting.tagReg);
+                console.log(elementSetting, htmlSegments);
+
+                _(htmlSegments)
+                    .forEach(function(segment, index, segments) {
+                        if (isOdd(index)) {
+                            segments[index] = addElementRev(segment, elementSetting);
+                        }
+                    });
+
+                return htmlSegments.join('');
+            }
 
             function prepareRegs() {
                 forEachElementSettings(function(elementSetting) {
@@ -83,7 +90,6 @@ function handlerFactory(options) {
             function forEachElementSettings(cb) {
                 _(options.fileTypes)
                     .forEach(function(fileType) {
-                        console.log(fileType);
                         return cb(options.elementAttributes[fileType])
                     });
             }
@@ -103,18 +109,12 @@ function handlerFactory(options) {
                 return '(' + regStr + ')';
             }
 
-            function addRev(segment) {
+            function addElementRev(segment, elementSetting) {
                 var segmentWithRev = segment;
 
-                forEachElementSettings(function(elementSetting) {
-                    if (elementSetting.tagReg.test(segment)) {
-                        elementSetting.pathReg.lastIndex = 0;
-                        var match = elementSetting.pathReg.exec(segment);
-                        console.log(segment, elementSetting.pathReg, match);
-                        segmentWithRev = segment.replace(elementSetting.pathReg, '$1' + '?v=xxxxxxxxx');
-                        return false; // 终止filetype尝试
-                    }
-                });
+                elementSetting.pathReg.lastIndex = 0;
+                var match = elementSetting.pathReg.exec(segment);
+                segmentWithRev = segment.replace(elementSetting.pathReg, '$1' + '?v=xxxxxxxxx');
 
                 return segmentWithRev;
             }
@@ -159,15 +159,15 @@ function handlerFactory(options) {
         function getDefaultElementAttributes() {
             return {
                 js: {
-                    tagRegStr: '<script [^>]+/?>',
+                    tagRegStr: '(<script [^>]+/?>)',
                     pathRegStr: '(?:\\s+src="([^"]+)")'
                 },
                 css: {
-                    tagRegStr: '<link [^>]+/?>',
+                    tagRegStr: '(<link [^>]+/?>)',
                     pathRegStr: '(?:\\s+href="([^"]+)")'
                 },
                 img: {
-                    tagRegStr: '<img [^>]+/?>',
+                    tagRegStr: '(<img [^>]+/?>)',
                     pathRegStr: '(?:\\s+src="([^"]+)")'
                 }
             };
