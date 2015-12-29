@@ -189,7 +189,7 @@ function handlerFactory(options) {
             fileTypes: ['js', 'css', 'img'],
             hashLength: 8,
             dateFormat: 'yyyymmddHHMM',
-            revType: 'hash',
+            revType: 'hash', // ['hash'|'date']
             transformPath: defaultPathTransformer,
             elementAttributes: getDefaultElementAttributes(),
             defaultDoAddElementRev: defaultDoAddElementRev
