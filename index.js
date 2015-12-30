@@ -101,7 +101,7 @@ function handlerFactory(options) {
             }
 
             function addElementRev(segment, elementSetting) {
-                var doAddElementRev = elementSetting.doAddElementRev || options.defaultDoAddElementRev;
+                var doAddElementRev = elementSetting.addElementRev || options.defaultAddElementRev;
                 return doAddElementRev(segment, addSrcRev, elementSetting);
             }
 
@@ -192,12 +192,12 @@ function handlerFactory(options) {
             revType: 'hash', // ['hash'|'date']
             transformPath: defaultPathTransformer,
             elementAttributes: getDefaultElementAttributes(),
-            defaultDoAddElementRev: defaultDoAddElementRev
+            defaultAddElementRev: defaultAddElementRev
         };
 
         // return void(0);
 
-        function defaultDoAddElementRev(segment, addSrcRev, elementSetting) {
+        function defaultAddElementRev(segment, addSrcRev, elementSetting) {
             elementSetting.pathReg.lastIndex = 0;
             var match = elementSetting.pathReg.exec(segment);
             if (match) {
