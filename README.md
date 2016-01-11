@@ -81,6 +81,7 @@ gulp revOrig-default
 - transformPath
 - defaultDoAddElementRev
 - elementAttributes.addElementRev
+- createDefaultOptions
 
 ## options.base
 
@@ -548,6 +549,105 @@ gulp.task('revOrig-withDefaultDoAddElementRev', function(argument) {
   <script src="/assets/index1.js"></script>
   <script src="http://assets/index.js"></script>
 </body>
+</html>
+```
+
+## createDefaultOptions
+
+```js
+type: function
+create default options for template
+```
+
+### example
+
+```js
+var gulp = require('gulp');
+var revOrig = require('gulp-rev-orig');
+
+gulp.task('revOrig-createDefaultOptions', function() {
+    var options = revOrig.createDefaultOptions();
+
+    options.elementAttributes.loadJs = {
+        tagRegStr: '(<js [^>]+/?>)',
+        pathRegStr: '(?:(\\s+src=")([^"]+)("))'
+    };
+
+    options.fileTypes.push('loadJs');
+
+    gulp.src('test.html')
+        .pipe(revOrig(options))
+        .pipe(gulp.dest('./dist'));
+});
+```
+
+### Input
+
+```html
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>gulp-rev-easy</title>
+    <link type="text/css" rel="stylesheet" media="all" href="assets/index.css?max_age=1024"
+    />
+    <link type="text/css" rel="stylesheet" media="all" href="assets/index.css?max_age=1024"
+    />
+</head>
+
+<body>
+    <img data-src="assets/audrey-hepburn.jpg" src="assets/audrey-hepburn.jpg">
+    <script src="assets/index.js?max_age=1024"></script>
+    <script src="/assets/index.js"></script>
+    <script src="/assets/index1.js"></script>
+    <script src="http://assets/index.js"></script>
+
+    <loads style="display: none;">
+        <js load="true" src="/assets/index.js"></js>,
+        <js load="true" src="/assets/index.js"></js>
+        <js load="true" src="/assets/index.js"></js>
+
+        <js load="false" src="/assets/index.js"></js>
+        <js load="false" src="/assets/index.js"></js>
+        <js load="false" src="/assets/index.js"></js>
+    </loads>
+</body>
+
+</html>
+```
+
+### Output
+
+```html
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>gulp-rev-easy</title>
+    <link type="text/css" rel="stylesheet" media="all" href="assets/index.css?max_age=1024&v=0a1085be"
+    />
+    <link type="text/css" rel="stylesheet" media="all" href="assets/index.css?max_age=1024&v=0a1085be"
+    />
+</head>
+
+<body>
+    <img data-src="assets/audrey-hepburn.jpg" src="assets/audrey-hepburn.jpg?v=6a5f96ce">
+    <script src="assets/index.js?max_age=1024&v=3fffb693"></script>
+    <script src="/assets/index.js?v=3fffb693"></script>
+    <script src="/assets/index1.js"></script>
+    <script src="http://assets/index.js"></script>
+
+    <loads style="display: none;">
+        <js load="true" src="/assets/index.js?v=3fffb693"></js>,
+        <js load="true" src="/assets/index.js?v=3fffb693"></js>
+        <js load="true" src="/assets/index.js?v=3fffb693"></js>
+
+        <js load="false" src="/assets/index.js?v=3fffb693"></js>
+        <js load="false" src="/assets/index.js?v=3fffb693"></js>
+        <js load="false" src="/assets/index.js?v=3fffb693"></js>
+    </loads>
+</body>
+
 </html>
 ```
 
