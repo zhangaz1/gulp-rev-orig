@@ -128,9 +128,15 @@ gulp.task('revOrig-withAddElementRev', function(argument) {
 });
 
 gulp.task('revOrig-createDefaultOptions', function() {
-    console.log(revOrig.createDefaultOptions);
-
     var options = revOrig.createDefaultOptions();
+
+    options.elementAttributes.loadJs = {
+        tagRegStr: '(<js [^>]+/?>)',
+        pathRegStr: '(?:(\\s+src=")([^"]+)("))'
+    };
+
+    options.fileTypes.push('loadJs');
+
     gulp.src('test.html')
         .pipe(revOrig(options))
         .pipe(gulp.dest('./dist'));

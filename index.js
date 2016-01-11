@@ -18,13 +18,18 @@ var fileRevCache = {};
 
 module.exports = handlerFactory;
 
+handlerFactory.createDefaultOptions = createDefaultOptions;
+
 return void(0);
 
 function handlerFactory(options) {
-    var defaultOptions = createDefaultOptions();
-    var options = _.assign(defaultOptions, options);
 
-    return through.obj(revHandler);
+    var defaultOptions = createDefaultOptions();
+    var options = _.assign({}, defaultOptions, options);
+
+    var plugin = through.obj(revHandler);
+
+    return plugin;
 
     // return void(0);
 
@@ -181,61 +186,62 @@ function handlerFactory(options) {
         }
     }
 
-    function createDefaultOptions() {
+}
+
+function createDefaultOptions() {
+    return {
+        cwd: '',
+        base: '',
+        suffix: 'v',
+        fileTypes: ['js', 'css', 'img'],
+        hashLength: 8,
+        dateFormat: 'yyyymmddHHMM',
+        revType: 'hash', // ['hash'|'date']
+        transformPath: defaultPathTransformer,
+        elementAttributes: getDefaultElementAttributes(),
+        defaultAddElementRev: defaultAddElementRev
+    };
+
+    // return void(0);
+
+    function defaultAddElementRev(segment, addSrcRev, elementSetting) {
+        elementSetting.pathReg.lastIndex = 0;
+        var match = elementSetting.pathReg.exec(segment);
+        if (match) {
+            var src = match[2];
+            var revSrc = addSrcRev(src);
+            return segment.replace(elementSetting.pathReg, '$1' + revSrc + '$3');
+        } else {
+            return segment;
+        }
+    }
+
+    function defaultPathTransformer(orgPath, rev) {
+        var regStr = '((\\?|\\&|\\&amp\\;)' + this.suffix + '=)([^&\\s]+)';
+        var reg = new RegExp(regStr, regOption);
+        var newpath = orgPath;
+        if (reg.test(orgPath)) {
+            newpath = orgPath.replace(reg, '$1' + rev);
+        } else {
+            newpath += ((orgPath.indexOf('?') > -1 ? '&' : '?') + this.suffix + '=' + rev);
+        }
+        return newpath;
+    }
+
+    function getDefaultElementAttributes() {
         return {
-            cwd: '',
-            base: '',
-            suffix: 'v',
-            fileTypes: ['js', 'css', 'img'],
-            hashLength: 8,
-            dateFormat: 'yyyymmddHHMM',
-            revType: 'hash', // ['hash'|'date']
-            transformPath: defaultPathTransformer,
-            elementAttributes: getDefaultElementAttributes(),
-            defaultAddElementRev: defaultAddElementRev
+            js: {
+                tagRegStr: '(<script [^>]+/?>)',
+                pathRegStr: '(?:(\\s+src=")([^"]+)("))'
+            },
+            css: {
+                tagRegStr: '(<link [^>]+/?>)',
+                pathRegStr: '(?:(\\s+href=")([^"]+)("))'
+            },
+            img: {
+                tagRegStr: '(<img [^>]+/?>)',
+                pathRegStr: '(?:(\\s+src=")([^"]+)("))'
+            }
         };
-
-        // return void(0);
-
-        function defaultAddElementRev(segment, addSrcRev, elementSetting) {
-            elementSetting.pathReg.lastIndex = 0;
-            var match = elementSetting.pathReg.exec(segment);
-            if (match) {
-                var src = match[2];
-                var revSrc = addSrcRev(src);
-                return segment.replace(elementSetting.pathReg, '$1' + revSrc + '$3');
-            } else {
-                return segment;
-            }
-        }
-
-        function defaultPathTransformer(orgPath, rev) {
-            var regStr = '((\\?|\\&|\\&amp\\;)' + options.suffix + '=)([^&\\s]+)';
-            var reg = new RegExp(regStr, regOption);
-            var newpath = orgPath;
-            if (reg.test(orgPath)) {
-                newpath = orgPath.replace(reg, '$1' + rev);
-            } else {
-                newpath += ((orgPath.indexOf('?') > -1 ? '&' : '?') + options.suffix + '=' + rev);
-            }
-            return newpath;
-        }
-
-        function getDefaultElementAttributes() {
-            return {
-                js: {
-                    tagRegStr: '(<script [^>]+/?>)',
-                    pathRegStr: '(?:(\\s+src=")([^"]+)("))'
-                },
-                css: {
-                    tagRegStr: '(<link [^>]+/?>)',
-                    pathRegStr: '(?:(\\s+href=")([^"]+)("))'
-                },
-                img: {
-                    tagRegStr: '(<img [^>]+/?>)',
-                    pathRegStr: '(?:(\\s+src=")([^"]+)("))'
-                }
-            };
-        }
     }
 }
