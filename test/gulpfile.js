@@ -126,3 +126,12 @@ gulp.task('revOrig-withAddElementRev', function(argument) {
         }))
         .pipe(gulp.dest('./dist'));
 });
+
+gulp.task('revOrig-createDefaultOptions', function() {
+    console.log(revOrig.createDefaultOptions);
+
+    var options = revOrig.createDefaultOptions();
+    gulp.src('test.html')
+        .pipe(revOrig(options))
+        .pipe(gulp.dest('./dist'));
+});
