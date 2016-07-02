@@ -1,30 +1,32 @@
 <!doctype html>
 <html lang="en">
 
-<head>
-    <title>gulp-rev-easy</title>
-    <link type="text/css" rel="stylesheet" media="all" href="assets/index.css?max_age=1024"
-    />
-    <link type="text/css" rel="stylesheet" media="all" href="assets/index.css?max_age=1024"
-    />
-</head>
+    <head>
+        <title>gulp-rev-easy</title>
+        <link type="text/css" rel="stylesheet" media="all" href="assets/index.css?max_age=1024" />
+        <link type="text/css" rel="stylesheet" media="all" href="assets/index.css?max_age=1024" />
+    </head>
 
-<body>
-    <img data-src="assets/audrey-hepburn.jpg" src="assets/audrey-hepburn.jpg">
-    <script src="assets/index.js?max_age=1024"></script>
-    <script src="/assets/index.js"></script>
-    <script src="/assets/index1.js"></script>
-    <script src="http://assets/index.js"></script>
+    <body>
+        <img data-src="assets/audrey-hepburn.jpg" src="assets/audrey-hepburn.jpg">
+        <script src="assets/index.js?max_age=1024"></script>
+        <script src="/assets/index.js"></script>
+        <script src="/assets/index1.js"></script>
+        <script src="/assets/index2.js"></script>
+        <script src="http://assets/index.js"></script>
 
-    <loads style="display: none;">
-        <js load="true" src="/assets/index.js"></js>,
-        <js load="true" src="/assets/index.js"></js>
-        <js load="true" src="/assets/index.js"></js>
+        <script src="/../assets/index.js"></script>
+        <script src="/../assets/index2.js"></script>
 
-        <js load="false" src="/assets/index.js"></js>
-        <js load="false" src="/assets/index.js"></js>
-        <js load="false" src="/assets/index.js"></js>
-    </loads>
-</body>
+        <loads style="display: none;">
+            <js load="true" src="/assets/index.js"></js>,
+            <js load="true" src="/assets/index.js"></js>
+            <js load="true" src="/assets/index.js"></js>
+
+            <js load="false" src="/assets/index.js"></js>
+            <js load="false" src="/assets/index.js"></js>
+            <js load="false" src="/assets/index.js"></js>
+        </loads>
+    </body>
 
 </html>
