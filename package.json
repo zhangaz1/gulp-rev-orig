@@ -1,6 +1,6 @@
 {
     "name": "gulp-rev-orig",
-    "version": "0.1.1",
+    "version": "0.1.3",
     "description": "gulp rev for js&css&img path in html without prejudice of other",
     "main": "index.js",
     "scripts": {
